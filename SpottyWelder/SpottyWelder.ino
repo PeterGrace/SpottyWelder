@@ -20,7 +20,7 @@
 #define BUTTON_C  2
 #define RELAY_PIN 3
 
-const int MAX_FIRE_MS=100;
+const int MAX_FIRE_MS=50;
 const int MAX_SLEEP_MS=100;
 const int MAX_PULSES=5;
 const int MAX_POWER=100;
@@ -175,7 +175,7 @@ void makeDisplay() {
     }
     case m_sleep:
     {
-      sprintf(n_line1, "Sleep: %2dms", o_sleep);
+      sprintf(n_line1, "Slp: %2dms", o_sleep);
       break;
     }
     case m_power:
