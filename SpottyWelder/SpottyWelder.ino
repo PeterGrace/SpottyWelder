@@ -15,18 +15,16 @@
 #define ROTARY_PIN1  14
 #define ROTARY_PIN2 12
 #define ROTARY_BUTTON 15
-// OLED FeatherWing buttons map to different pins depending on board:
-#if defined(ESP8266)
-  #define BUTTON_A  0
-  #define BUTTON_B 16
-  #define BUTTON_C  2
-#elif defined(ESP32)
-  #define BUTTON_A 15
-  #define BUTTON_B 32
-  #define BUTTON_C 14
-#endif
-
+#define BUTTON_A  0
+#define BUTTON_B 16
+#define BUTTON_C  2
 #define RELAY_PIN 3
+
+const int MAX_FIRE_MS=100;
+const int MAX_SLEEP_MS=100;
+const int MAX_PULSES=5;
+const int MAX_POWER=100;
+
 
 Button2 b = Button2(ROTARY_BUTTON);
 Button2 c = Button2(BUTTON_C);
@@ -55,10 +53,11 @@ void setup() {
   Serial.println("setup begun");
   i_triggered=false;
   r.setChangedHandler(checkRotary);
-  c.setTapHandler(doubleClick);
+  c.setClickHandler(engageWelder);
+  c.setLongClickHandler(engageWelder);
   b.setTapHandler(tap);
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(RELAY_PIN, HIGH);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // Address 0x3C for 128x32
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
@@ -79,8 +78,8 @@ void loop() {
   makeDisplay();
   
 }
-void doubleClick(Button2& b) {
-    Serial.println("DoubleClick!  Firing!");
+void engageWelder(Button2& b) {
+    Serial.println("Click detected!  Firing!");
     when_triggered=millis();
     i_triggered=true;
     i_pulseidx=0;
@@ -102,28 +101,28 @@ void checkRotary(ESPRotary &r) {
     case m_pulses:
     {
       o_pulses=o_pulses + delta;
-      if (o_pulses > 5) o_pulses=5;
+      if (o_pulses > MAX_PULSES) o_pulses=MAX_PULSES;
       if (o_pulses < 1) o_pulses=1;
       break;
     }
     case m_duration:
     {
       o_duration=o_duration + delta;
-      if (o_duration > 1000) o_pulses=1000;
-      if (o_duration < 1) o_pulses=1;
+      if (o_duration > MAX_FIRE_MS) o_duration=MAX_FIRE_MS;
+      if (o_duration < 1) o_duration=1;
       break;
     }
     case m_sleep:
     {
       o_sleep=o_sleep + delta;
-      if (o_sleep > 1000) o_sleep=1000;
+      if (o_sleep > MAX_SLEEP_MS) o_sleep=MAX_SLEEP_MS;
       if (o_sleep < 1) o_sleep=1;
       break;
     }
     case m_power:
     {
       o_power=o_power + delta;
-      if (o_power > 100) o_power=100;
+      if (o_power > MAX_POWER) o_power=MAX_POWER;
       if (o_power < 1) o_power=1;
       break;      
     }
@@ -148,12 +147,17 @@ void relayCheck() {
   if (i_triggered) 
     if (now-when_triggered > o_duration) {
       i_triggered=false;
-      digitalWrite(RELAY_PIN, LOW);
+      digitalWrite(RELAY_PIN, HIGH);
     }
     else
-      digitalWrite(RELAY_PIN, HIGH);
+    {
+      digitalWrite(RELAY_PIN, LOW);
+    }   
   else
-    digitalWrite(RELAY_PIN, LOW);
+    {
+    digitalWrite(RELAY_PIN, HIGH);
+    }
+
 }
 
 void makeDisplay() {
@@ -166,17 +170,17 @@ void makeDisplay() {
     }
     case m_duration:
     {
-      sprintf(n_line1, "Dur: %2d", o_duration);
+      sprintf(n_line1, "Dur: %2dms", o_duration);
       break;
     }
     case m_sleep:
     {
-      sprintf(n_line1, "Sleep: %2d", o_sleep);
+      sprintf(n_line1, "Sleep: %2dms", o_sleep);
       break;
     }
     case m_power:
     {
-      sprintf(n_line1, "Power: %3d", o_power);
+      sprintf(n_line1, "Power: %3d%", o_power);
       break;
     }
   }  
